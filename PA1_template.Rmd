@@ -1,12 +1,12 @@
 ---
-title: "Reproducible research peer assignment 1"
+title: "Reproducible research peer assessment 1"
 author: "Yasukazu IKAMI"
 date: "Sunday, December 14, 2014"
 output: html_document
 ---
-# Reproducible research peer assignment 1
+# Reproducible research peer assessment 1
 
-This is setting for assignment. 
+This is setting. 
 ```{r}
 Sys.setlocale("LC_TIME", "English")
 library(ggplot2)
