@@ -1,0 +1,134 @@
+---
+title: "Reproducible research peer assignment 1"
+author: "Yasukazu IKAMI"
+date: "Sunday, December 14, 2014"
+output: html_document
+---
+# Reproducible research peer assignment 1
+
+This is setting for assignment. 
+```{r}
+Sys.setlocale("LC_TIME", "English")
+library(ggplot2)
+```
+
+## Loading and processing data
+It is supposed that *activity.csv* is in the current directory.
+```{r}
+data <- read.csv("activity.csv")
+```
+
+Processing data to calculate total number of steps taken each day.
+Dataframe *daytotal* consists col1 = date, col2 = total number of steps for the day.
+```{r}
+daytotal <- aggregate(steps ~ date, data, sum)
+```
+
+## What is mean total number of steps taken per day?
+Making a histogram. x-axis is total number of steps taken per day.
+```{r}
+hist(daytotal$steps, xlab="Total number of steps taken per day",main="")
+```
+
+Calculation of mean of total number os steps taken per day.
+```{r}
+mean(daytotal$steps)
+```
+
+Calculation of median of total number of steps taken per day.
+```{r}
+median(daytotal$steps)
+```
+
+Results are very slightly different.
+
+## What is the average daily activity pattern?
+Processing data to calculate average activity pattern for all days.
+Dataframe *intervalaverage* consists col1 = interval, col2 = average steps taken for all days.
+```{r}
+intervalaverage <- aggregate(steps ~ interval, data, mean)
+```
+Plot the time series of average number of steps taken, averaged across all days.
+```{r}
+plot(intervalaverage, type="l", ylab="Average number of steps",
+     main="Average number of steps taken, averaged across all days")
+```
+
+Find the *interval* point where *steps* recorded their maximum on average.
+```{r}
+intervalaverage[which.max(intervalaverage$steps),"interval"]
+```
+
+## Imputing missing values
+Calculate number of NA values from *steps* in dataframe *data*
+```{r}
+sum(is.na(data$steps)==TRUE)
+```
+
+Strategy for imputing missing values in original dataset is as follows. It is to replace NAs by average steps of the interval when NA value is recorded.
+Processing data to calculate the average steps taken for each day. It is preparation for the inputing missing values.
+
+Create temporary vector *filling*. It contains steps with NAs replaced with average steps for its interval.
+When the element of *filling* is NA, first, find the interval of NA value is recorded by match() function.
+And replace NA value by steps averaged by interval which is calculated former section.
+```{r}
+filling <- data$steps
+for(i in 1:length(filling)){
+    if(is.na(filling[i])){
+        index <- match(data[i,"interval"],intervalaverage$interval)
+        filling[i] <- intervalaverage[index,"steps"]
+    }
+}
+```
+
+Create new dataset *newdf* with replaced NAs. And rename colnames.
+```{r}
+newdf <- cbind(filling,data[2:3])
+names(newdf) <- c("steps","date","interval")
+```
+Making a histogram of new dataset, calculating mean and median. These procedures are same as that for original dataset.
+```{r}
+newdaytotal <- aggregate(steps ~ date,newdf,sum)
+
+hist(newdaytotal$steps,xlab="Total number of steps taken per day",main="")
+mean(newdaytotal$steps)
+median(newdaytotal$steps)
+```
+Mean and median value of total number of steps became the same by imputing NA values by the interval averaged steps.
+
+## Are there differences in activity patterns between weekdays and weekends?
+Dataframe *weekendlist* contains pairs of the day of the week and whether it is weekday or weekend.
+```{r}
+weekendlist <- data.frame(day=c("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"),
+                          we=c(rep("Weekday",5),rep("Weekend",2)))
+```
+New vector *wd* contains whether the day is weekday or weekend.
+First, created as the copy of date of original dataset. And converted into the day (Sunday to Saturday).
+```{r}
+wd <- data$date
+wd <- weekdays(as.Date(wd))
+```
+For all element of *wd*, find whether the element is weekday or weekend by matching *weekendlist*.
+And replace the day by *weekday* or *weekend*.
+```{r}
+for(i in 1:length(wd)){
+  index <- match(wd[i],weekendlist$day)
+  wd[i] <- as.character(weekendlist[index,"we"])
+  
+}
+wd <- as.factor(wd)
+```
+Final dataframe *n2df* is combination of NA replaced dataframe and the vector indicates the day is weekday or weekend.
+*stepsintwd* is the dataframe contains col1=interval, col2 = weekday/weekend, col3 = average steps in each interval and weekday/weekend.
+```{r}
+n2df <- cbind(newdf,wd)
+stepsintwd <- aggregate(steps ~ interval + wd,n2df,mean)
+```
+
+Two time series plots which show weekday and weekend average activity patterns averaged across all the days.
+To plot panel plots, ggplot2 package is used.
+```{r}
+g <- ggplot(stepsintwd,aes(interval,steps))
+g + geom_line() + facet_grid(wd ~ .) + labs(y="Average steps taken")
+```
+
